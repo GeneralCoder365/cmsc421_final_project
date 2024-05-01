@@ -28,7 +28,11 @@ def build_table(data):
 
     data.dropna(inplace=True)
     data.reset_index(inplace = True)
-    data.drop(['close', 'date', 'time', 'id'], axis=1, inplace=True)
+    data.drop(['close', 'date', 'time'], axis=1, inplace=True)
+
+    if 'id' in data:
+
+        data.drop(['id'], axis=1, inplace=True)
 
     sc = MinMaxScaler(feature_range=(0,1))
     data_set_scaled = sc.fit_transform(data)

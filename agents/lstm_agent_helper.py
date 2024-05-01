@@ -1,5 +1,7 @@
 import keras
 import lstm_agent as lstm
+import tensorflow as tf
+
 class agent_helper():
 
     def __init__(self, env, stock_list):
@@ -13,16 +15,18 @@ class agent_helper():
 
         for name, data in stock_list:
 
-            path = './models/' + name + '.keras'
+            path = 'models/' + name + '_lstm_model.keras'
             curr = keras.models.load_model(path)
             self.model_list.append(curr)
 
             # getting data to make predictions and compare to actual
             tmp = lstm.build_table(data)
             tmpx, tmpy = lstm.pre_train(tmp)
-            _, X_test, _, Y_test = lstm.split_data(tmpx, tmpy, 0.8)
+            _, X_test, _, Y_test = lstm.split_data(tmpx, tmpy, 0.9999)
             self.lstm_dataX.append(X_test)
             self.lstm_dataY.append(Y_test)
+
+        print(self.lstm_dataX[0].shape)
         
     def action(self, observation_idx):
 
@@ -32,7 +36,8 @@ class agent_helper():
 
         for idx, model in enumerate(self.model_list):
 
-            prediction = model.predict(self.lstm_dataX[idx][[observation_idx]])
+            # prediction = model.predict(self.lstm_dataX[idx][[observation_idx]]
+            prediction = model(self.lstm_dataX[idx][[observation_idx]])
             prev_day = self.lstm_dataY[idx][observation_idx - 1]
 
             diff = prediction[0][0] - prev_day[0]
