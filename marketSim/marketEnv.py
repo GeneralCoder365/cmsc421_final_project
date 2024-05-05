@@ -53,7 +53,7 @@ class markEnv(gym.Env):
 
         self.net = [0] * self.numStocks # used to see net profit
 
-        self.results = pandas.DataFrame(columns=['date', 'stock', 'decision', 'profit'])
+        self.results = pandas.DataFrame(columns=['date', 'time', 'stock', 'decision', 'profit'])
 
 
 
@@ -97,8 +97,8 @@ class markEnv(gym.Env):
 
             self.net[idx] += curr_net_profit
         
-            to_append_results = pandas.DataFrame([[self.stocks[stockIndex-1][1]['date'][self.agentLocation], idx, choice, curr_net_profit]], columns=self.results.columns)
-            self.results = pandas.concat([to_append_results, self.results])
+            to_append_results = pandas.DataFrame([[self.stocks[stockIndex-1][1]['date'][self.agentLocation], self.stocks[stockIndex-1][1]['time'][self.agentLocation], idx, choice, curr_net_profit]], columns=self.results.columns)
+            self.results = pandas.concat([self.results, to_append_results])
         # increment agent index
         self.agentLocation += 1
 
@@ -106,7 +106,7 @@ class markEnv(gym.Env):
         if self.agentLocation == self.limit:
             self.terminated = True
 
-        # print(self.results)
+        self.results = self.results.reset_index(drop=True)
 
         return self.agentLocation, self.reward, self.terminated, {}
     
@@ -129,6 +129,10 @@ class markEnv(gym.Env):
 
         # return agent location
         return self.agentLocation, {}
+    
+    def get_results(self):
+
+        return self.results
     
 
     # return current agent location

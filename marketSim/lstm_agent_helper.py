@@ -42,7 +42,7 @@ class agent_helper():
 
         correct_pred = 0
 
-        threshold = 0.0000005
+        threshold = 0.005
 
         action_list = []
 
@@ -69,24 +69,38 @@ class agent_helper():
             actual_val = self.lstm_dataY[idx][observation_idx]
             actual_diff = actual_val[0] - prev_day[0]
 
-            # compare prediction to actual result
-            if(actual_diff > threshold): # should buy
+            # # compare prediction to actual result
+            # if(actual_diff > threshold): # should buy
 
-                if(curr_action == 1):
+            #     if(curr_action == 1):
 
-                    correct_pred += 1
-                    self.total_correct_pred[idx] += 1
+            #         correct_pred += 1
+            #         self.total_correct_pred[idx] += 1
+                    
             
-            elif(actual_diff < -1 * threshold): # should sell
+            # elif(actual_diff < -1 * threshold): # should sell
 
-                if(curr_action == 2):
+            #     if(curr_action == 2):
+
+            #         correct_pred += 1
+            #         self.total_correct_pred[idx] += 1
+
+            # else: # should hold
+                
+            #     if(curr_action == 0):
+
+            #         correct_pred += 1
+            #         self.total_correct_pred[idx] += 1
+
+            if(actual_diff > 0):
+
+                if(curr_action != 2): # did not sell well price went up
 
                     correct_pred += 1
                     self.total_correct_pred[idx] += 1
-
-            else: # should hold
-                
-                if(curr_action == 0):
+            else:
+            
+                if(curr_action != 1): # did not buy well price went down
 
                     correct_pred += 1
                     self.total_correct_pred[idx] += 1

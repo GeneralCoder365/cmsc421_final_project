@@ -18,4 +18,7 @@ print('Profits:', environment.get_profits(), '\n\n')
 correct_decisions, num_days = lstm.get_total_correct_predictions()
 print('Correct Decision:', correct_decisions, '\n\n')
 percentage_correct = [x/num_days for x in correct_decisions]
-print('Percent Correct:', percentage_correct)
+print('Percent Correct:', percentage_correct, '\n\n')
+
+results = environment.get_results()
+print(results.to_string())
