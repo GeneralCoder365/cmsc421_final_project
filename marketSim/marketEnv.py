@@ -53,6 +53,10 @@ class markEnv(gym.Env):
 
         self.net = [0] * self.numStocks # used to see net profit
 
+        self.results = pandas.DataFrame(columns=['date', 'stock', 'decision', 'profit'])
+
+
+
     def get_unmodified_stocks(self):
 
         return self.unmodified_stocks
@@ -92,13 +96,17 @@ class markEnv(gym.Env):
             stockIndex += 1
 
             self.net[idx] += curr_net_profit
-
+        
+            to_append_results = pandas.DataFrame([[self.stocks[stockIndex-1][1]['date'][self.agentLocation], idx, choice, curr_net_profit]], columns=self.results.columns)
+            self.results = pandas.concat([to_append_results, self.results])
         # increment agent index
         self.agentLocation += 1
 
         # determine if agent has reached the limit
         if self.agentLocation == self.limit:
             self.terminated = True
+
+        print(self.results)
 
         return self.agentLocation, self.reward, self.terminated, {}
     
