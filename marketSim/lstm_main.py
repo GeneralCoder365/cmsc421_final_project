@@ -1,7 +1,7 @@
 import marketEnv as me
 import lstm_agent_helper as LSTM
 
-environment = me.markEnv(train_test_stop=0.9999)
+environment = me.markEnv(train_test_stop=0.9)
 train_test = environment.get_train_test_stop()
 lstm = LSTM.agent_helper(environment, environment.get_unmodified_stocks(), train_test)
 
@@ -21,6 +21,6 @@ percentage_correct = [x/num_days for x in correct_decisions]
 print('Percent Correct:', percentage_correct, '\n\n')
 
 results = environment.get_results()
-print(results.to_string())
+# print(results.to_string())
 
 results.to_csv('lstm_results.csv', index=False)
