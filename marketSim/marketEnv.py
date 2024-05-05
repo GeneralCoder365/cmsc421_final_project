@@ -106,7 +106,7 @@ class markEnv(gym.Env):
         if self.agentLocation == self.limit:
             self.terminated = True
 
-        print(self.results)
+        # print(self.results)
 
         return self.agentLocation, self.reward, self.terminated, {}
     
