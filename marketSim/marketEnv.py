@@ -51,6 +51,8 @@ class markEnv(gym.Env):
         # self.limit = round(self.train*self.numObservations)
         self.limit = round((1-self.train_test_stop)*self.numObservations)
 
+        self.net = [0] * self.numStocks # used to see net profit
+
     def get_unmodified_stocks(self):
 
         return self.unmodified_stocks
@@ -62,6 +64,7 @@ class markEnv(gym.Env):
     # performs an action in the environment
     # action = an array of length length = stocks list with an integer between 0-2 for each stock
     # returns the new state, reward (array of length = stocks list), and terminated
+
     def step(self, action: list):
         # initiate reward
         self.reward = np.zeros(shape=self.numStocks, dtype=np.float32)
@@ -70,19 +73,25 @@ class markEnv(gym.Env):
         stockIndex = 0
 
         # calculate reward and possibleGain from actions
-        for choice in action:
+        for idx, choice in enumerate(action):
             self.open = self.stocks[stockIndex][1]['open'][self.agentLocation]
             self.close = self.stocks[stockIndex][1]['close'][self.agentLocation]
             percentChange = (self.close - self.open)/self.open
+
+            curr_net_profit = 0
 
             if choice == 0: # hold action
                 self.reward[stockIndex] = 0
             elif choice == 1: # buy action
                 self.reward[stockIndex] = percentChange - self.operationCost
+                curr_net_profit = self.close - self.open
             elif choice == 2: # sell action
                 self.reward[stockIndex] = (-1*percentChange) - self.operationCost
+                curr_net_profit = self.open - self.close
 
             stockIndex += 1
+
+            self.net[idx] += curr_net_profit
 
         # increment agent index
         self.agentLocation += 1
@@ -92,6 +101,10 @@ class markEnv(gym.Env):
             self.terminated = True
 
         return self.agentLocation, self.reward, self.terminated, {}
+    
+    def get_profits(self):
+        
+        return self.net
 
 
     # reset environment variables for next episode
