@@ -22,3 +22,5 @@ print('Percent Correct:', percentage_correct, '\n\n')
 
 results = environment.get_results()
 print(results.to_string())
+
+results.to_csv('lstm_results.csv', index=False)
