@@ -6,10 +6,10 @@ import os # read directories
 
 class markEnv(gym.Env):
     # set up environmnet: read and process data (must be OHLCV and csv format), action and observation space
-    def __init__(self, train=1, operationCost=0, callback=None):
+    def __init__(self, train_test_stop=0.8, operationCost=0, callback=None):
         # declare class variables
         self.episode = 1
-        self.train = train # value between 0 and 1 (inclusive) for training agent
+        self.train_test_stop = train_test_stop # value between 0 and 1 (inclusive) for training agent
         self.operationCost = operationCost # cost to ensure optimal trading
         self.callback = callback 
         self.done = False # determines if episode is done
@@ -21,12 +21,14 @@ class markEnv(gym.Env):
 
         # data will contain a tuple of the stock name and stock data
         self.stocks = []
+        self.unmodified_stocks = []
 
         # use pandas to read each individual stock data csv 
         path = "datasets/"
         for file in os.listdir(path):
             # declare a dataframe for the file and process any irrelevant data
             df = pandas.read_csv(path + "/" + file)
+            df_unmodified = pandas.read_csv(path + "/" + file)
 
             # drop id column and convert date and time columns to relevant classes
             df.drop('id', axis='columns', inplace=True)
@@ -35,6 +37,7 @@ class markEnv(gym.Env):
 
             # append stock name and data to list
             self.stocks.append((file.replace(".csv", ""), df))
+            self.unmodified_stocks.append((file.replace(".csv", ""), df_unmodified))
 
         # action space: 0 (hold), 1 (buy), 2 (sell)
         self.action_space = spaces.Discrete(3)
@@ -45,7 +48,16 @@ class markEnv(gym.Env):
         # length of stocks list and limit
         self.numStocks = len(self.stocks)
         self.numObservations = len(self.stocks[0][1]['date']) # number of data rows, could use any column name
-        self.limit = round(self.train*self.numObservations)
+        # self.limit = round(self.train*self.numObservations)
+        self.limit = round((1-self.train_test_stop)*self.numObservations)
+
+    def get_unmodified_stocks(self):
+
+        return self.unmodified_stocks
+    
+    def get_train_test_stop(self):
+
+        return self.train_test_stop
 
     # performs an action in the environment
     # action = an array of length length = stocks list with an integer between 0-2 for each stock
