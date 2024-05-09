@@ -1,0 +1,20 @@
+{
+    "lstm": {
+        "mean_arbitrage_gain": 341541.6860653276,
+        "max_arbitrage_gain": 2540314.451780836,
+        "total_arbitrage_gain": 374329687.9275991,
+        "total_opportunities": 1096,
+        "opportunities_with_gain": 1086,
+        "opportunities_with_loss": 0,
+        "opportunities_with_no_arbitrage": 10
+    },
+    "arima": {
+        "mean_arbitrage_gain": 1756479.6369292715,
+        "max_arbitrage_gain": 3426616.935853959,
+        "total_arbitrage_gain": 1925101682.0744815,
+        "total_opportunities": 1096,
+        "opportunities_with_gain": 1096,
+        "opportunities_with_loss": 0,
+        "opportunities_with_no_arbitrage": 0
+    }
+}
