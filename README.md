@@ -1,6 +1,8 @@
 # cmsc421_final_project
 
-Branches:
+View 'Final' branch for final writeup, results, and presentation.
+
+Code Branches:
 
 Final - this branch contains the final versions of ARIMA, LSTM, and Multi-DQN agents along with analysis comparing ARIMA and LSTM
 
