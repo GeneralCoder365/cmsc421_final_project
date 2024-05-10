@@ -1,99 +1,94 @@
-#Copyright (C) 2020 Salvatore Carta, Anselmo Ferreira, Alessandro Sebastian Podda, Diego Reforgiato Recupero, Antonio Sanna. All rights reserved.
+import os
+import pandas as pd
+import numpy as np
 
-#os library is used to define the GPU to be used by the code, needed only in cerain situations (Better not to use it, use only if the main gpu is Busy)
-#import os
-#os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
-#os.environ["CUDA_VISIBLE_DEVICES"]="0";
+from data_manager import get_csvs_from_dir, load_data, feature_engineering
+from stock_environment import OptionsTradingEnv
+from dqn_agent import DeepQTradingAgent
+from ensemble_manager import full_ensemble, perc_ensemble
 
-#This is the class call for the Agent which will perform the experiment
-from deepQTrading import DeepQTrading
+def save_predictions(date_range, actuals, predictions, results_dir, model_name='multidqn'):
+    results_path = os.path.join(results_dir, 'predictions.csv')
+    if os.path.exists(results_path):
+        results_df = pd.read_csv(results_path)
+    else:
+        results_df = pd.DataFrame(columns=['date', 'actual'])
 
-#Date library to manipulate time in the source code
-import datetime
+    results_df[model_name] = predictions  # Update or create the column for DQN predictions
+    results_df['date'] = date_range
+    results_df['actual'] = actuals
+    results_df.to_csv(results_path, index=False)
+    print(f"Predictions saved in {results_path}")
 
-#Keras library to define the NN to be used
-from keras.models import Sequential
+def main():
+    print("Starting the main process...")
 
-#Layers used in the NN considered
-from keras.layers import Dense, Activation, Flatten
+    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    r, sigma, T = 0.01, 0.2, 1/12  # Configuration parameters
+    volume = 1000000  # Large volume for institutional level trading
+    model_names = ['multidqn1', 'multidqn2', 'multidqn3']  # Names of the models
+    window_length = 50
+    nb_steps = 10000
+    nb_episodes_test = 10
 
-#Activation Layers used in the source code
-from keras.layers.advanced_activations import LeakyReLU, PReLU, ReLU
+    print("Loading data...")
+    data_directory = os.path.join(project_dir, 'environment', 'datasets')
+    csv_files, stock_names = get_csvs_from_dir(data_directory)
 
-#Optimizer used in the NN
-from keras.optimizers import Adam
+    for file_path in csv_files:
+        print(f"Processing file: {file_path}")
 
-#Libraries used for the Agent considered
-from rl.agents.dqn import DQNAgent
-from rl.memory import SequentialMemory
-from rl.policy import EpsGreedyQPolicy
+        df = load_data(file_path)
+        df = feature_engineering(df)
 
+        # Initialize and set up the trading environment
+        env = OptionsTradingEnv(df, r=r, sigma=sigma, T=T, volume=volume, window_length=window_length)
 
-#Library used for showing the exception in the case of error 
-import sys
+        # Initialize agents
+        agents = []
+        for model_name in model_names:
+            input_shape = (2,)  # Adjust based on your actual environment setup
+            output_shape = env.action_space.n
+            agent = DeepQTradingAgent(input_shape=input_shape, output_shape=output_shape, window_length=window_length)
+            agents.append(agent)
 
-#import tensorflow as tf
-#from keras.backend.tensorflow_backend import set_session
-#config = tf.ConfigProto()
-#config.gpu_options.per_process_gpu_memory_fraction = 0.3
-#set_session(tf.Session(config=config))
+            # Train and save model
+            print(f"Training and saving model: {model_name}")
+            agent.train(env, nb_steps, model_name)
 
+        # Collect and average predictions from each agent
+        predictions = []
+        for index, agent in enumerate(agents):
+            # Load model weights
+            model_path = os.path.join(project_dir, 'agents', 'trained_models', model_names[index] + '.h5')
+            print(f"Loading model: {model_names[index]} for testing")
+            agent.load(model_path)
 
+            # Test the model
+            predicted_prices = agent.test(env, nb_episodes_test)
+            predictions.append(predicted_prices)
 
-#Let's capture the starting time and send it to the destination in order to tell that the experiment started 
-startingTime=datetime.datetime.now()
+        # Employ ensemble decision-making
+        if len(predictions) > 1:
+            print("Applying ensemble decision making...")
+            ensemble_results = perc_ensemble(predictions)  # Choose based on your preference
+            ensemble_decisions = ensemble_results['Ensemble Decision'].tolist()
+            print(f"Ensemble Decisions: {ensemble_decisions}")
+        else:
+            ensemble_decisions = predictions[0]
 
-#There are three actions possible in the stock market
-#Hold(id 0): do nothing.
-#Long(id 1): It predicts that the stock market value will raise at the end of the day. 
-#So, the action performed in this case is buying at the beginning of the day and sell it at the end of the day (aka long).
-#Short(id 2): It predicts that the stock market value will decrease at the end of the day.
-#So, the action that must be done is selling at the beginning of the day and buy it at the end of the day (aka short). 
-nb_actions = int(sys.argv[1])
+        # Update the environment with new predicted prices
+        env.set_predicted_prices(ensemble_decisions)
 
-isOnlyShort=sys.argv[2]==1
+        # Date range for predictions
+        date_range = pd.date_range(start=df.index[-nb_episodes_test], periods=nb_episodes_test)
 
-#This is a simple NN considered. It is composed of:
-#One flatten layer to get 68 dimensional vectors as input
-#One dense layer with 35 neurons and LeakyRelu activation
-#One final Dense Layer with the 3 actions considered
-#the input is 20 observation days from the past, 8 observations from the past week and 
-#40 observations from the past hours
-model = Sequential()
-model.add(Flatten(input_shape=(1,1,68)))
-model.add(Dense(35,activation='linear'))
-model.add(LeakyReLU(alpha=.001))
-model.add(Dense(nb_actions))
-model.add(Activation('linear'))
+        # Save results
+        actuals = df['actual'].iloc[-nb_episodes_test:].tolist()
+        results_dir = os.path.join(project_dir, 'results', os.path.basename(file_path).split('.')[0])
+        save_predictions(date_range, actuals, ensemble_decisions, results_dir)
 
+    print("Process completed.")
 
-#Define the DeepQTrading class with the following parameters:
-#explorations: 0.2 operations are random, and 100 epochs.
-#in this case, epochs parameter is used because the Agent acts on daily basis, so its better to repeat the experiments several
-#times so, its defined that each epoch will work on the data from training, validation and testing.
-#trainSize: the size of the train data gotten from the dataset, we are setting 5 stock market years, or 1800 days
-#validationSize: the size of the validation data gotten from dataset, we are setting 6 stock market months, or 180 days
-#testSize: the size of the testing data gotten from dataset, we are setting 6 stock market months, or 180 days
-#outputFile: where the results will be written
-#begin: where the walks will start from. We are defining January 1st of 2010
-#end: where the walks will finish. We are defining February 22nd of 2019
-#nOutput:number of walks
-dqt = DeepQTrading(
-    model=model,
-    explorations=[(0.2,100)],
-    trainSize=datetime.timedelta(days=360*5),
-    validationSize=datetime.timedelta(days=30*6),
-    testSize=datetime.timedelta(days=30*6),
-    outputFile="./Output/csv/walks/walks",
-    begin=datetime.datetime(2001,1,1,0,0,0,0),
-    end=datetime.datetime(2019,2,28,0,0,0,0),
-    nbActions=nb_actions,
-    isOnlyShort=isOnlyShort,
-    ensembleFolderName=sys.argv[3]
-    )
-
-dqt.run()
-
-dqt.end()
-
-
+if __name__ == '__main__':
+    main()
