@@ -26,16 +26,11 @@ class SpEnv(gym.Env):
 
     #Observation window is the time window regarding the "hourly" dataset 
     #ensemble variable tells to save or not the decisions at each walk
-    def __init__(self, minLimit=None, maxLimit=None, operationCost=0, observationWindow=40, ensemble=None, callback=None, isOnlyShort=False, columnName="iteration-1", use_arima=False, arima_threshold=0.01):
-        super().__init__()
-        
-        # Declare the episode as the first episode
-        self.episode = 1
-        self.isOnlyShort = isOnlyShort
-        
-        # Arima agent initialization
-        self.use_arima = use_arima
-        self.arima_threshold = arima_threshold
+    def __init__(self, minLimit=None, maxLimit=None, operationCost = 0, observationWindow = 40, ensamble = None, callback = None, isOnlyShort=False, columnName = "iteration-1"):
+        #Declare the episode as the first episode
+        self.episode=1
+
+        self.isOnlyShort=isOnlyShort
         
         #Open the time series as the hourly dataset of S&P500
         #the input feature vector is composed of data from hours, weeks and days
@@ -59,16 +54,16 @@ class SpEnv(gym.Env):
         #Load the data
         self.output=False
 
-        #ensemble is the table of validation and testing
+        #ensamble is the table of validation and testing
         #If its none, you will not save csvs of validation and testing    
-        if(ensemble is not None): # managing the ensemble output (maybe in the wrong way)
+        if(ensamble is not None): # managing the ensamble output (maybe in the wrong way)
             self.output=True
-            self.ensemble=ensemble
+            self.ensamble=ensamble
             self.columnName = columnName
             #self.ensemble is a big table (before file writing) containing observations as lines and epochs as columns
             #each column will contain a decision for each epoch at each date. It is saved later.
             #We read this table later in order to make ensemble decisions at each epoch
-            self.ensemble[self.columnName]=0
+            self.ensamble[self.columnName]=0
 
         #Declare low and high as vectors with -inf values 
         self.low = numpy.array([-numpy.inf])
@@ -121,10 +116,6 @@ class SpEnv(gym.Env):
         #Initiates the reward, weeklist and daylist
         self.reward=0
         
-        if self.use_arima:
-            # Translate ARIMA prediction into action
-            action = self.interpret_arima_action(action)
-        
 
         ##UNCOMMENT NEXT LINE FOR ONLY SHORT AGENT
         if(self.isOnlyShort):
@@ -163,26 +154,15 @@ class SpEnv(gym.Env):
             self.callback.on_episode_end(action,self.reward,self.possibleGain)
         
 
-        #File of the ensemble (file containing each epoch decisions at each walk) will contain the action for that 
+        #File of the ensamble (file containing each epoch decisions at each walk) will contain the action for that 
         #day (observation, line) at each epoch (column)
         if(self.output):
-            self.ensemble.at[self.history[self.currentObservation]['Date'],self.columnName]=action
+            self.ensamble.at[self.history[self.currentObservation]['Date'],self.columnName]=action
         
         
         
         #Return the state, reward and if its done or not
         return self.getObservation(self.history[self.currentObservation]['Date']), self.reward, self.done, {}
-    
-    
-    def interpret_arima_action(self, predicted_value):
-        if predicted_value > self.arima_threshold:
-            return 1  # Buy if gain, else sell
-        elif predicted_value < -self.arima_threshold:
-            return 2  # Sell if loss, else buy
-        else:
-            return 0  # Hold
-    
-    
         
     #function done when the episode finishes
     #reset will prepare the next state (feature vector) and give it to the agent
@@ -220,8 +200,8 @@ class SpEnv(gym.Env):
 
 
     def getObservation(self, date):
-        
-        #Get the daily information and week information
+
+        #Get the dayly information and week information
         #get all the data
         # dayList=self.dayData.get(date)
         # weekList=self.weekData.get(date)
@@ -239,23 +219,13 @@ class SpEnv(gym.Env):
         
         
         #The state is prepared by the environment, which is simply the feature vector
-        
-        #! Adjusted to fetch historical data for ARIMA when use_arima is True.
-        if self.use_arima:
-            # For ARIMA, we return a sequence of past closing prices
-            # Assuming 'self.observationWindow' defines how many past observations we want
-            past_data_index = max(0, self.currentObservation - self.observationWindow)
-            past_data = [self.history[i]['Close'] for i in range(past_data_index, self.currentObservation)]
-            return numpy.array([past_data])
-        else:
-            # Original DQN observation calculation
-            return  numpy.array(
-                [list(
-                    map(
-                        lambda x: (x["Close"]-x["Open"])/x["Open"],
-                            self.history[self.currentObservation-self.observationWindow:self.currentObservation]  + 
-                            self.dayData.get(date) + 
-                            self.weekData.get(date)))])
+        return  numpy.array(
+            [list(
+                map(
+                    lambda x: (x["Close"]-x["Open"])/x["Open"],
+                        self.history[self.currentObservation-self.observationWindow:self.currentObservation]  + 
+                        self.dayData.get(date) + 
+                        self.weekData.get(date)))])
     
     def resetEnv(self):
         self.currentObservation=self.observationWindow
