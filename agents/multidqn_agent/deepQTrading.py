@@ -11,8 +11,7 @@ from keras.models import Sequential
 
 #Keras libraries for layers, activations and optimizers used
 from keras.layers import Dense, Activation, Flatten
-# from keras.layers.advanced_activations import LeakyReLU, PReLU
-from keras.layers import ELU, PReLU, LeakyReLU
+from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.optimizers import Adam
 
 #RL Agent 
